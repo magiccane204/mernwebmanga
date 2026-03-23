@@ -711,3 +711,25 @@ nav a:hover {
     font-size: 24px;
   }
 }
+/* Performance Optimization */
+* {
+  will-change: transform, opacity;
+}
+
+/* Smooth GPU animations */
+.auth-card,
+.role-btn,
+.auth-button {
+  transform: translateZ(0);
+}
+
+/* Prevent layout shift */
+img {
+  max-width: 100%;
+  display: block;
+}
+
+/* Better scroll */
+body {
+  scroll-behavior: smooth;
+}

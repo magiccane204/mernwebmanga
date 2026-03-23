@@ -1,11 +1,10 @@
 import React, { useEffect, useRef } from "react";
 
-const API = "https://mernwebmanga.vercel.app/";
+const API = "https://mernwebmanga.onrender.com";
 
 function Home({ pdfs, setPdfs }) {
   const fileInputRef = useRef(null);
 
-  // Fetch PDFs
   useEffect(() => {
     const fetchPdfs = async () => {
       try {
@@ -15,19 +14,18 @@ function Home({ pdfs, setPdfs }) {
           }
         });
 
-        const data = await res.json();
-
-        if (Array.isArray(data)) {
-          setPdfs(data);
-        } else if (Array.isArray(data.pdfs)) {
-          setPdfs(data.pdfs);
-        } else {
-          setPdfs([]);
+        let data;
+        try {
+          data = await res.json();
+        } catch {
+          console.error("Not JSON");
+          return;
         }
 
+        setPdfs(Array.isArray(data) ? data : []);
+
       } catch (err) {
-        console.error("Error fetching PDFs:", err);
-        setPdfs([]);
+        console.error("Fetch error:", err);
       }
     };
 
@@ -35,16 +33,12 @@ function Home({ pdfs, setPdfs }) {
   }, [setPdfs]);
 
 
-
-  // Upload PDFs
   const handleUpload = async (e) => {
     const files = e.target.files;
     if (!files.length) return;
 
     const formData = new FormData();
-    for (let i = 0; i < files.length; i++) {
-      formData.append("pdfs", files[i]);
-    }
+    for (let f of files) formData.append("pdfs", f);
 
     try {
       const res = await fetch(`${API}/api/pdfs`, {
@@ -55,16 +49,15 @@ function Home({ pdfs, setPdfs }) {
         body: formData
       });
 
-      const data = await res.json();
-
-      let newPdfs = [];
-      if (Array.isArray(data)) {
-        newPdfs = data;
-      } else if (Array.isArray(data.pdfs)) {
-        newPdfs = data.pdfs;
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        console.error("Upload not JSON");
+        return;
       }
 
-      setPdfs((prev) => [...prev, ...newPdfs]);
+      setPdfs(prev => [...prev, ...data]);
 
     } catch (err) {
       console.error("Upload error:", err);
@@ -72,77 +65,35 @@ function Home({ pdfs, setPdfs }) {
   };
 
 
-
   return (
-    <div className="page home-page">
+    <div>
 
-      <button
-        onClick={() => fileInputRef.current.click()}
-        style={{
-          background: "#1c1c1c",
-          color: "#fff",
-          borderRadius: "30px",
-          padding: "12px 25px",
-          fontWeight: "bold",
-          border: "1px solid #333",
-          cursor: "pointer",
-          transition: "all 0.3s ease",
-          fontSize: "16px"
-        }}
-      >
-        📤 Upload PDFs
-
+      <button onClick={() => fileInputRef.current.click()}>
+        Upload PDFs
         <input
           type="file"
-          accept="application/pdf"
           multiple
+          accept="application/pdf"
           ref={fileInputRef}
           onChange={handleUpload}
           style={{ display: "none" }}
         />
       </button>
 
+      <h2>PDFs</h2>
 
-      <h2>📁 Manga Collection (PDF)</h2>
+      {pdfs.map((pdf, i) => {
+        const url = `${API}/api/pdfs/file/${pdf.filename}`;
 
+        return (
+          <div key={i}>
+            <iframe src={url} width="200" height="250" title={pdf.name} />
+            <p>{pdf.name}</p>
+            <a href={url} target="_blank">Open</a>
+          </div>
+        );
+      })}
 
-      <div className="pdf-grid">
-        {(!Array.isArray(pdfs) || pdfs.length === 0) && (
-          <p>No PDFs uploaded yet.</p>
-        )}
-
-        {Array.isArray(pdfs) &&
-          pdfs.map((pdf, index) => {
-
-            // ✅ GridFS URL
-            const fileUrl = `${API}/api/pdfs/file/${pdf.filename}`;
-
-            return (
-              <div key={index} className="pdf-card">
-
-                <iframe
-                  src={fileUrl + "#toolbar=0&navpanes=0&scrollbar=0"}
-                  title={pdf.name}
-                  className="pdf-preview"
-                ></iframe>
-
-                <p className="pdf-name">
-                  {pdf.name.replace(/\.pdf$/i, "")}
-                </p>
-
-                <a
-                  href={fileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="open-btn"
-                >
-                  🔎 Open PDF
-                </a>
-
-              </div>
-            );
-          })}
-      </div>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
-import "./Auth.css";
+import "./App.css";
 
 const API = "https://mernwebmanga.vercel.app";
 

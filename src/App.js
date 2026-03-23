@@ -4,15 +4,28 @@ import axios from "axios";
 const API = "https://mernwebmanga.onrender.com";
 
 function LoginPage({ setMode, setLoggedIn, setUserRole, setUserEmail }) {
-  const [selectedRole, setSelectedRole] = useState("reader");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
 
-  // Save login
-  const saveLogin = (role, email = "", token = `local-token-${Date.now()}`) => {
+  const [selectedRole, setSelectedRole] = useState("reader");
+  const [form, setForm] = useState({
+    email: "",
+    password: ""
+  });
+
+  const [ui, setUI] = useState({
+    loading: false,
+    error: "",
+    showPassword: false
+  });
+
+  const updateForm = (field, value) => {
+    setForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const updateUI = (field, value) => {
+    setUI(prev => ({ ...prev, [field]: value }));
+  };
+
+  const saveLogin = (role, email, token) => {
     localStorage.setItem("userToken", token);
     localStorage.setItem("userRole", role);
     localStorage.setItem("userEmail", email);
@@ -22,96 +35,89 @@ function LoginPage({ setMode, setLoggedIn, setUserRole, setUserEmail }) {
     setLoggedIn(true);
   };
 
-  // Reader quick login
-  const quickRoleLogin = (role) => {
-    saveLogin(role);
+  const validate = () => {
+    if (!form.email || !form.password) {
+      updateUI("error", "Email and password required");
+      return false;
+    }
+    return true;
   };
 
-  // ✅ FIXED LOGIN (NO OTP)
   const handleLogin = async () => {
-    setError("");
+    if (!validate()) return;
 
-    if (!email || !password) {
-      setError("Please enter email and password");
-      return;
-    }
-
-    setLoading(true);
+    updateUI("loading", true);
+    updateUI("error", "");
 
     try {
       const res = await axios.post(`${API}/login`, {
-        email,
-        password
+        email: form.email,
+        password: form.password
       });
 
-      if (res.data.token) {
-        saveLogin(res.data.user.role, email, res.data.token);
-      } else {
-        setError("Login failed");
+      const { token, user } = res.data;
+
+      if (!token || !user) {
+        throw new Error("Invalid response from server");
       }
 
+      saveLogin(user.role, form.email, token);
+
     } catch (err) {
-      setError(err.response?.data?.message || "Login failed");
+      updateUI(
+        "error",
+        err.response?.data?.message || err.message || "Login failed"
+      );
     } finally {
-      setLoading(false);
+      updateUI("loading", false);
     }
   };
 
   const handleRoleChange = (role) => {
     setSelectedRole(role);
-    setError("");
-
-    setEmail("");
-    setPassword("");
+    updateUI("error", "");
+    setForm({ email: "", password: "" });
 
     if (role === "reader") {
-      quickRoleLogin("reader");
+      saveLogin("reader", "", "guest-token");
     }
   };
 
   return (
     <div className="auth-container">
       <div className="auth-card login-card">
+
         <div className="auth-header">
           <div className="avatar-container">
-            <img src="/user.png" alt="profile pic" className="auth-avatar" />
+            <img src="/user.png" alt="profile" className="auth-avatar" />
           </div>
           <h1 className="auth-title">Welcome to MangaVerse</h1>
           <p className="auth-subtitle">Sign in to continue</p>
         </div>
 
-        {/* Role Selection */}
+        {/* Role Selector */}
         <div className="role-selector">
-          <button
-            onClick={() => handleRoleChange("admin")}
-            className={`role-btn ${selectedRole === "admin" ? "active" : ""}`}
-          >
-            👑 Admin
-          </button>
-
-          <button
-            onClick={() => handleRoleChange("creator")}
-            className={`role-btn ${selectedRole === "creator" ? "active" : ""}`}
-          >
-            ✍️ Creator
-          </button>
-
-          <button
-            onClick={() => handleRoleChange("reader")}
-            className={`role-btn ${selectedRole === "reader" ? "active" : ""}`}
-          >
-            📖 Reader
-          </button>
+          {["admin", "creator", "reader"].map(role => (
+            <button
+              key={role}
+              onClick={() => handleRoleChange(role)}
+              className={`role-btn ${selectedRole === role ? "active" : ""}`}
+            >
+              {role === "admin" && "👑 Admin"}
+              {role === "creator" && "✍️ Creator"}
+              {role === "reader" && "📖 Reader"}
+            </button>
+          ))}
         </div>
 
         {/* Error */}
-        {error && (
+        {ui.error && (
           <div className="error-message">
-            ⚠️ {error}
+            ⚠️ {ui.error}
           </div>
         )}
 
-        {/* Admin + Creator LOGIN (SAME NOW) */}
+        {/* Admin / Creator */}
         {(selectedRole === "admin" || selectedRole === "creator") && (
           <div className="auth-form">
 
@@ -119,11 +125,10 @@ function LoginPage({ setMode, setLoggedIn, setUserRole, setUserEmail }) {
               <label>Email</label>
               <input
                 type="email"
-                placeholder="Enter email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={form.email}
+                onChange={(e) => updateForm("email", e.target.value)}
                 className="auth-input"
-                disabled={loading}
+                disabled={ui.loading}
               />
             </div>
 
@@ -131,19 +136,18 @@ function LoginPage({ setMode, setLoggedIn, setUserRole, setUserEmail }) {
               <label>Password</label>
               <div className="password-input-wrapper">
                 <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Enter password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  type={ui.showPassword ? "text" : "password"}
+                  value={form.password}
+                  onChange={(e) => updateForm("password", e.target.value)}
                   className="auth-input"
-                  disabled={loading}
+                  disabled={ui.loading}
                 />
                 <button
                   type="button"
                   className="password-toggle"
-                  onClick={() => setShowPassword(!showPassword)}
+                  onClick={() => updateUI("showPassword", !ui.showPassword)}
                 >
-                  {showPassword ? "👁️" : "👁️‍🗨️"}
+                  {ui.showPassword ? "👁️" : "👁️‍🗨️"}
                 </button>
               </div>
             </div>
@@ -151,10 +155,11 @@ function LoginPage({ setMode, setLoggedIn, setUserRole, setUserEmail }) {
             <button
               className="auth-button primary"
               onClick={handleLogin}
-              disabled={loading}
+              disabled={ui.loading}
             >
-              {loading ? "Logging in..." : "Login"}
+              {ui.loading ? "Logging in..." : "Login"}
             </button>
+
           </div>
         )}
 
@@ -162,14 +167,14 @@ function LoginPage({ setMode, setLoggedIn, setUserRole, setUserEmail }) {
         {selectedRole === "reader" && (
           <div className="reader-info">
             <div className="info-card">
-              📚 Reader Access  
+              📚 Reader Access
               <p>You can view all comics freely.</p>
-              <p>You're already logged in as a Reader!</p>
+              <p>You're already logged in!</p>
             </div>
           </div>
         )}
 
-        {/* Sign Up */}
+        {/* Footer */}
         <div className="auth-footer">
           <p>
             Don't have an account?{" "}
@@ -181,6 +186,7 @@ function LoginPage({ setMode, setLoggedIn, setUserRole, setUserEmail }) {
             </span>
           </p>
         </div>
+
       </div>
     </div>
   );

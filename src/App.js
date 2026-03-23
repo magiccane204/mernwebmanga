@@ -32,7 +32,7 @@ function App() {
   useEffect(() => {
     const fetchPdfs = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/pdfs");
+        const res = await fetch("https://mernwebmanga.vercel.app/");
         if (!res.ok) {
           throw new Error(`HTTP error! status: ${res.status}`);
         }

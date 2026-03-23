@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 
-const API = "https://mernwebmanga.onrender.com";
+const API = "https://mernwebmanga.vercel.app/";
 
 function Home({ pdfs, setPdfs }) {
   const fileInputRef = useRef(null);

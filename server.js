@@ -18,7 +18,7 @@ app.use(express.json());
 
 // ================= MONGODB =================
 
-mongoose.connect(process.env.MONGO_URI)
+mongoose.connect('mongodb+srv://raj:Raj%40101105@cluster0.3swrnlq.mongodb.net/?appName=Cluster0')
   .then(() => console.log("✅ MongoDB connected"))
   .catch(err => console.log(err));
 
@@ -53,7 +53,7 @@ const PDF = mongoose.model("PDF", pdfSchema);
 
 // ================= AUTH =================
 
-const JWT_SECRET = process.env.JWT_SECRET || "secret123";
+const JWT_SECRET = "vhsdjgxvfeuawkshewiuygewdauywgeyiufgewsdkjhvcfekuysfvikasdvkuhfvc" || "secret123";
 
 app.post("/register", async (req, res) => {
   try {
@@ -117,7 +117,7 @@ const auth = (req, res, next) => {
 // ================= GRIDFS STORAGE =================
 
 const storage = new multerGridFSStorage({
-  url: process.env.MONGO_URI,
+  url: 'mongodb+srv://raj:Raj%40101105@cluster0.3swrnlq.mongodb.net/?appName=Cluster0',
   file: (req, file) => ({
     filename: Date.now() + "-" + file.originalname,
     bucketName: "pdfs"

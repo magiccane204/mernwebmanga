@@ -12,15 +12,21 @@ const jwt = require("jsonwebtoken");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
-app.use(express.json());
+// ================= MIDDLEWARE =================
 
+app.use(cors({
+  origin: "*",
+  methods: ["GET", "POST", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
+
+app.use(express.json());
 
 // ================= MONGODB =================
 
-mongoose.connect('mongodb+srv://raj:Raj%40101105@cluster0.3swrnlq.mongodb.net/?appName=Cluster0')
+mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB connected"))
-  .catch(err => console.log(err));
+  .catch(err => console.log("Mongo Error:", err));
 
 let bucket;
 
@@ -30,7 +36,6 @@ mongoose.connection.once("open", () => {
   });
   console.log("✅ GridFS Bucket Ready");
 });
-
 
 // ================= SCHEMAS =================
 
@@ -50,14 +55,17 @@ const pdfSchema = new mongoose.Schema({
 const User = mongoose.model("User", userSchema);
 const PDF = mongoose.model("PDF", pdfSchema);
 
-
 // ================= AUTH =================
 
-const JWT_SECRET = "vhsdjgxvfeuawkshewiuygewdauywgeyiufgewsdkjhvcfekuysfvikasdvkuhfvc" || "secret123";
+const JWT_SECRET = process.env.JWT_SECRET;
 
 app.post("/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: "Missing fields" });
+    }
 
     const exists = await User.findOne({ email });
     if (exists) return res.status(400).json({ message: "User exists" });
@@ -67,9 +75,10 @@ app.post("/register", async (req, res) => {
     const user = new User({ name, email, password: hash });
     await user.save();
 
-    res.json({ message: "Registered" });
+    res.json({ message: "Registered successfully" });
 
   } catch (err) {
+    console.error("REGISTER ERROR:", err);
     res.status(500).json({ message: "Register error" });
   }
 });
@@ -79,31 +88,35 @@ app.post("/login", async (req, res) => {
     const { email, password } = req.body;
 
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: "Invalid" });
+    if (!user) return res.status(400).json({ message: "Invalid credentials" });
 
     const ok = await bcrypt.compare(password, user.password);
-    if (!ok) return res.status(400).json({ message: "Invalid" });
+    if (!ok) return res.status(400).json({ message: "Invalid credentials" });
 
     const token = jwt.sign(
-      { userId: user._id, email: user.email },
+      { userId: user._id, email: user.email, role: user.role },
       JWT_SECRET,
       { expiresIn: "1d" }
     );
 
     res.json({ token, user });
 
-  } catch {
+  } catch (err) {
+    console.error("LOGIN ERROR:", err);
     res.status(500).json({ message: "Login error" });
   }
 });
 
-
 // ================= AUTH MIDDLEWARE =================
 
 const auth = (req, res, next) => {
-  const token = req.headers.authorization?.split(" ")[1];
+  const header = req.headers.authorization;
 
-  if (!token) return res.status(401).json({ message: "No token" });
+  if (!header) {
+    return res.status(401).json({ message: "No token" });
+  }
+
+  const token = header.split(" ")[1];
 
   try {
     req.user = jwt.verify(token, JWT_SECRET);
@@ -113,11 +126,10 @@ const auth = (req, res, next) => {
   }
 };
 
-
 // ================= GRIDFS STORAGE =================
 
 const storage = new multerGridFSStorage({
-  url: 'mongodb+srv://raj:Raj%40101105@cluster0.3swrnlq.mongodb.net/?appName=Cluster0',
+  url: process.env.MONGO_URI,
   file: (req, file) => ({
     filename: Date.now() + "-" + file.originalname,
     bucketName: "pdfs"
@@ -125,7 +137,6 @@ const storage = new multerGridFSStorage({
 });
 
 const upload = multer({ storage });
-
 
 // ================= UPLOAD =================
 
@@ -143,16 +154,15 @@ app.post("/api/pdfs", auth, upload.array("pdfs"), async (req, res) => {
 
     await PDF.insertMany(files);
 
-    return res.json(files);
+    res.json(files);
 
   } catch (err) {
     console.error("UPLOAD ERROR:", err);
-    return res.status(500).json({ message: "Upload failed" });
+    res.status(500).json({ message: "Upload failed" });
   }
 });
 
-
-// ================= GET =================
+// ================= GET PDFs =================
 
 app.get("/api/pdfs", auth, async (req, res) => {
   try {
@@ -164,19 +174,25 @@ app.get("/api/pdfs", auth, async (req, res) => {
   }
 });
 
-
-// ================= STREAM =================
+// ================= STREAM PDF =================
 
 app.get("/api/pdfs/file/:filename", async (req, res) => {
   try {
-    const downloadStream = bucket.openDownloadStreamByName(req.params.filename);
-    downloadStream.pipe(res);
+    res.set("Content-Type", "application/pdf");
+
+    const stream = bucket.openDownloadStreamByName(req.params.filename);
+
+    stream.on("error", () => {
+      res.status(404).json({ message: "File not found" });
+    });
+
+    stream.pipe(res);
+
   } catch (err) {
     console.error("STREAM ERROR:", err);
     res.status(500).json({ message: "Stream error" });
   }
 });
-
 
 // ================= DELETE =================
 
@@ -196,7 +212,14 @@ app.delete("/api/pdfs/:id", auth, async (req, res) => {
   }
 });
 
+// ================= HEALTH CHECK =================
+
+app.get("/", (req, res) => {
+  res.send("🚀 API Running");
+});
 
 // ================= START =================
 
-app.listen(PORT, () => console.log(`🚀 Server running on ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});

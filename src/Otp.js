@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 
+const API = "https://mernwebmanga.onrender.com";
+
 function Otp({ setMode, setLoggedIn, setUserRole, setUserEmail }) {
   const [otp, setOtp] = useState("");
   const email = localStorage.getItem("pendingLoginEmail");
@@ -13,7 +15,7 @@ function Otp({ setMode, setLoggedIn, setUserRole, setUserEmail }) {
     }
 
     try {
-      const res = await axios.post("http://localhost:5000/verify-otp", {
+      const res = await axios.post(`${API}/verify-otp`, {
         email,
         otp,
       });

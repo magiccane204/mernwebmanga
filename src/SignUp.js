@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import axios from 'axios';
 
+const API = "https://mernwebmanga.onrender.com";
+
 function SignUp({ setMode }) {
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
@@ -80,7 +82,7 @@ function SignUp({ setMode }) {
 
         setLoading(true);
         try {
-            await axios.post("http://localhost:5000/register", {
+            await axios.post(`${API}/register`, {
                 name: username,
                 email,
                 password,

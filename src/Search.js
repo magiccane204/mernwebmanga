@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 
+const API = "https://mernwebmanga.onrender.com";
+
 function Search({ pdfs }) {
   const [query, setQuery] = useState("");
 
@@ -19,21 +21,24 @@ function Search({ pdfs }) {
 
       <div className="pdf-grid">
         {filtered.length === 0 && <p>No results found.</p>}
-        {filtered.map((pdf, index) => (
-          <div key={index} className="pdf-card">
-            <iframe
-              src={pdf.url + "#toolbar=0&navpanes=0&scrollbar=0"}
-              title={pdf.name}
-              className="pdf-preview"
-            ></iframe>
+        {filtered.map((pdf, index) => {
+          const pdfUrl = `${API}/api/pdfs/file/${pdf.filename}`;
+          return (
+            <div key={index} className="pdf-card">
+              <iframe
+                src={pdfUrl + "#toolbar=0&navpanes=0&scrollbar=0"}
+                title={pdf.name}
+                className="pdf-preview"
+              ></iframe>
 
-            <p className="pdf-name">{pdf.name}</p>
+              <p className="pdf-name">{pdf.name}</p>
 
-            <a href={pdf.url} target="_blank" rel="noopener noreferrer" className="open-btn">
-              Open PDF
-            </a>
-          </div>
-        ))}
+              <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="open-btn">
+                Open PDF
+              </a>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 
-const API = "https://mernwebmanga.onrender.com";
+const API = "https://mernwebmanga.vercel.app/";
 
 function LoginPage({ setMode, setLoggedIn, setUserRole, setUserEmail }) {
 

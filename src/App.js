@@ -9,7 +9,7 @@ import Otp from './Otp';
 import MainAppContent from './MainAppContent';
 import './App.css';
 
-const API = "https://mernwebmanga.onrender.com";
+const API = "https://mernwebmanga.vercel.app";
 
 function App() {
   const [pdfs, setPdfs] = useState([]);
